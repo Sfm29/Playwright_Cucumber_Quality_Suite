@@ -1,0 +1,31 @@
+{
+  "name": "playwright-cucumber-quality-suite",
+  "version": "1.0.0",
+  "description": "BDD, accessibility and visual regression testing framework for automationexercise.com — Playwright + Cucumber + TypeScript",
+  "license": "MIT",
+  "author": "Steve Ferreira Magalhães",
+  "scripts": {
+    "test": "cucumber-js",
+    "test:chromium": "cross-env BROWSER=chromium cucumber-js",
+    "test:firefox": "cross-env BROWSER=firefox cucumber-js",
+    "test:webkit": "cross-env BROWSER=webkit cucumber-js",
+    "test:smoke": "cucumber-js --tags @smoke",
+    "test:a11y": "cucumber-js --tags @accessibility",
+    "test:visual": "playwright test",
+    "test:visual:update": "playwright test --update-snapshots",
+    "report:allure": "allure generate reports/allure-results --clean -o reports/allure-report && allure open reports/allure-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.1",
+    "@cucumber/cucumber": "^11.1.1",
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.5",
+    "allure-cucumberjs": "^3.1.1",
+    "allure-commandline": "^2.32.0",
+    "cross-env": "^7.0.3",
+    "playwright": "^1.49.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,27 @@
+services:
+  suite-chromium:
+    build: .
+    environment:
+      - BASE_URL=https://automationexercise.com
+      - HEADED=false
+    volumes:
+      # Reports land on the host so they survive after the container exits.
+      - ./reports:/app/reports
+
+  suite-firefox:
+    build: .
+    environment:
+      - BASE_URL=https://automationexercise.com
+      - BROWSER=firefox
+    volumes:
+      - ./reports:/app/reports
+    command: ["npm", "run", "test:firefox"]
+
+  suite-webkit:
+    build: .
+    environment:
+      - BASE_URL=https://automationexercise.com
+      - BROWSER=webkit
+    volumes:
+      - ./reports:/app/reports
+    command: ["npm", "run", "test:webkit"]
