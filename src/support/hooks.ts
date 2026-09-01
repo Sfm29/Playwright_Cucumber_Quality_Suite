@@ -35,9 +35,18 @@ Before(async function (this: QualityGateWorld) {
 AfterStep(async function (this: QualityGateWorld, { result }) {
   // Attach a screenshot to the Allure/HTML report for every failed step — this is the
   // single highest-value piece of evidence when triaging a failure from CI.
+  //
+  // Deliberately wrapped: this hook runs only on top of an already-failed step, so if
+  // capturing the screenshot itself throws (e.g. the page/context is already gone
+  // because the failure was a crashed navigation), that secondary error must never be
+  // allowed to replace or hide the original failure reason in the report.
   if (result.status === Status.FAILED) {
-    const screenshot = await this.page.screenshot();
-    this.attach(screenshot, 'image/png');
+    try {
+      const screenshot = await this.page.screenshot();
+      this.attach(screenshot, 'image/png');
+    } catch (screenshotError) {
+      console.error('Could not capture failure screenshot:', screenshotError);
+    }
   }
 });
 
