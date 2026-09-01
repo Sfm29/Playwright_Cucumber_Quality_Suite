@@ -6,7 +6,12 @@ export class ProductsPage extends BasePage {
   private readonly searchedProductsHeading = '.features_items .title';
   private readonly productCards = '.product-image-wrapper';
   private readonly productName = '.productinfo p';
-  private readonly addToCartByIdLink = (id: string) => `a.add-to-cart[data-product-id="${id}"]`;
+  // Scoped to `.productinfo` on purpose: each product card renders the "Add to cart"
+  // button TWICE — once always in the DOM under `.productinfo`, and again inside a
+  // `.product-overlay` hover layer with the exact same data-product-id. An unscoped
+  // selector resolves to both and Playwright's strict mode rejects the ambiguity;
+  // this targets only the primary, always-visible one.
+  private readonly addToCartByIdLink = (id: string) => `.productinfo > a.add-to-cart[data-product-id="${id}"]`;
   private readonly cartModal = '#cartModal';
   private readonly cartModalTitle = '#cartModal .modal-title';
   private readonly viewCartLink = '#cartModal a[href="/view_cart"]';
@@ -34,10 +39,9 @@ export class ProductsPage extends BasePage {
   }
 
   async addToCart(productId: string): Promise<void> {
-    // Hover first: the "Add to cart" overlay only becomes clickable on hover in the real UI.
     const card = this.page.locator(this.addToCartByIdLink(productId));
     await card.scrollIntoViewIfNeeded();
-    await card.click({ force: true });
+    await card.click();
     await this.page.waitForSelector(this.cartModal, { state: 'visible' });
   }
 
