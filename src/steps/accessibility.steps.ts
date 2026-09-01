@@ -46,6 +46,22 @@ const BLOCKING_IMPACTS = ['critical', 'serious'];
  *
  *   link-name — the home-page carousel and "recommended items" carousel each render
  *   two icon-only prev/next arrows with no accessible text, aria-label, or title.
+ *
+ * One more source of noise, handled differently — see the `.exclude(...)` calls
+ * below rather than an allowlist entry here: `avoid-inline-spacing` and, on some
+ * runs, an extra `color-contrast` node appear inside `.goog-rentries` and other
+ * `[class*="google-anno"]` elements. These aren't part of automationexercise.com's
+ * own markup at all — they're injected client-side, at page-load time, by a
+ * third-party ad/annotation script (the classic "auto-highlight some page text as
+ * clickable ad links" pattern). Confirmed by what gets annotated: it changes
+ * between runs (product category names one run, different product names the next),
+ * and the injected nodes carry ad-network attributes (`data-google-vignette`,
+ * `data-google-interstitial`) nowhere else on the site. A per-selector allowlist
+ * entry doesn't fit this shape of problem — the exact elements are different every
+ * time by design, so there is no fixed selector to allowlist. Excluding the
+ * injected class patterns from the scan is the right level to intervene at: this
+ * suite exists to test automationexercise.com, not whatever ad network happens to
+ * inject overlay content into third-party pages that day.
  */
 const EXACT_SELECTORS: Record<string, string[]> = {
   'button-name': ['#subscribe', '#submit_search'],
@@ -87,6 +103,11 @@ When('I open the {string} page', async function (this: QualityGateWorld, pageKey
 Then('it should have no critical or serious accessibility violations', async function (this: QualityGateWorld) {
   const results = await new AxeBuilder({ page: this.page as any })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    // Excludes injected third-party ad/annotation overlay content, not part of the
+    // site's own authored markup — see the comment above KNOWN_THIRD_PARTY_ISSUES for
+    // why this can't be handled the same way as the rest of that allowlist.
+    .exclude('.goog-rentries')
+    .exclude('[class*="google-anno"]')
     .analyze();
 
   const blocking = results.violations

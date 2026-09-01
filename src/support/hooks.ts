@@ -1,6 +1,7 @@
 import { AfterAll, AfterStep, BeforeAll, Before, After, Status } from '@cucumber/cucumber';
 import { Browser, chromium, firefox, webkit } from 'playwright';
 import { QualityGateWorld } from './world';
+import { blockThirdPartyAds } from './adBlock';
 
 let browser: Browser;
 
@@ -39,6 +40,9 @@ BeforeAll(async function () {
 Before(async function (this: QualityGateWorld) {
   this.context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
   this.page = await this.context.newPage();
+  // See adBlock.ts: keeps the third-party ad/annotation script that injects
+  // non-deterministic content into the page from ever loading.
+  await blockThirdPartyAds(this.page);
   this.initPageObjects();
 });
 
