@@ -11,6 +11,7 @@ jobs:
   bdd-tests:
     name: BDD functional + accessibility (${{ matrix.browser }})
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +46,7 @@ jobs:
   visual-regression:
     name: Visual regression
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 

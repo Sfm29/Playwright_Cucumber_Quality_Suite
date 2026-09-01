@@ -10,16 +10,22 @@ import { Page } from 'playwright';
  * the resulting page height (and, on the product-detail page, sometimes even the
  * rendered width — consistent with an occasional full-page "vignette" interstitial).
  *
- * That's exactly what showed up as two seemingly unrelated CI failures: flaky
- * accessibility violations (`avoid-inline-spacing`, extra `color-contrast` nodes —
- * see the `.exclude(...)` calls in accessibility.steps.ts) and flaky visual
- * regression diffs (screenshots differing in height between otherwise-identical
- * runs, sometimes dramatically). One root cause, two symptoms.
+ * It ALSO serves Google's "Funding Choices" consent-management platform from
+ * `fundingchoicesmessages.google.com`, which injects a full-screen IAB-TCF consent
+ * modal ("This site asks for consent to use your data") over the page — thousands
+ * of `.fc-*` DOM nodes, a dimmed backdrop, and a centered dialog. Whether it shows
+ * on any given load is non-deterministic (it depends on cookie state and on whether
+ * its script wins the race against the test's first action). When it does show it
+ * dims and covers the whole viewport, so: visual baselines captured while it was up
+ * are simply wrong (see the committed login baseline), and a functional step that
+ * clicks a now-obscured button waits until it times out — which is why the same
+ * suite is green locally and red on CI's slower engines (Firefox first).
  *
- * CSS-hiding the result after the fact (which both of those call sites also do, as
- * defence in depth) doesn't stop the script from running and reflowing the page
- * first. Blocking its network requests outright is the more reliable fix: the
- * widget never loads, so there's nothing to hide and nothing to reflow around.
+ * All of it is the same class of problem and takes the same fix. CSS-hiding the
+ * result after the fact (which the visual/a11y call sites also do, as defence in
+ * depth) doesn't stop the script from running and reflowing/covering the page
+ * first. Blocking the network requests outright is the reliable fix: nothing loads,
+ * so there's nothing to hide, reflow around, or click through.
  */
 const AD_HOST_PATTERNS = [
   /googlesyndication\.com/,
@@ -29,6 +35,11 @@ const AD_HOST_PATTERNS = [
   /googletagmanager\.com/,
   /googletagservices\.com/,
   /adservice\.google\.com/,
+  // Google Funding Choices / consent-management platform — the full-screen
+  // "asks for consent to use your data" modal. Blocking the host stops the modal
+  // from ever being injected.
+  /fundingchoicesmessages\.google\.com/,
+  /fundingchoices\.google\.com/,
 ];
 
 export async function blockThirdPartyAds(page: Page): Promise<void> {

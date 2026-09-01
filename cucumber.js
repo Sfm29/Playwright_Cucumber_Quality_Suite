@@ -26,6 +26,14 @@ module.exports = {
     formatOptions: {
       resultsDir: 'reports/allure-results',
     },
+    // This suite drives a live, ad-heavy third-party site (see src/support/adBlock.ts):
+    // it has an irreducible flake floor — the site is occasionally slow, briefly 5xxs,
+    // or reflows mid-scenario. On CI, give each failing scenario up to two more
+    // attempts before the build goes red; a scenario that only passes on retry is
+    // still surfaced (cucumber's JSON report keeps just the final attempt, and the
+    // console shows the retries), so a genuinely broken scenario still fails while a
+    // one-off blip doesn't. Locally: no retry — a failure there should be loud and fast.
+    retry: process.env.CI ? 2 : 0,
     publishQuiet: true,
     worldParameters: {
       baseUrl: process.env.BASE_URL || 'https://automationexercise.com',

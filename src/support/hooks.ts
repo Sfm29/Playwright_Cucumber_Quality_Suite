@@ -1,7 +1,20 @@
-import { AfterAll, AfterStep, BeforeAll, Before, After, Status } from '@cucumber/cucumber';
+import { AfterAll, AfterStep, BeforeAll, Before, After, Status, setDefaultTimeout } from '@cucumber/cucumber';
 import { Browser, chromium, firefox, webkit } from 'playwright';
 import { QualityGateWorld } from './world';
 import { blockThirdPartyAds } from './adBlock';
+
+/**
+ * Cucumber's default per-step timeout is 5s. Several page objects deliberately wait
+ * up to 10s for the live third-party site to respond (the waitFor/waitForFunction
+ * calls in LoginPage, ProductsPage and CartPage), and a CI runner loading that
+ * ad-heavy public site over a slower network path routinely needs more than 5s for
+ * a single navigation. Without raising this, Cucumber kills the step at 5s with
+ * "function timed out" *before* the page object's own longer, intentional wait can
+ * resolve — which is exactly how a suite that's green locally turns red in CI, on
+ * the slowest engine first (Firefox). 60s on CI is a generous ceiling; the
+ * Playwright calls nested inside still enforce their own tighter per-action limits.
+ */
+setDefaultTimeout(process.env.CI ? 60_000 : 30_000);
 
 let browser: Browser;
 

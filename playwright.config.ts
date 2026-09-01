@@ -10,7 +10,11 @@ export default defineConfig({
   testDir: './tests/visual',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // Same rationale as the Cucumber `retry` in cucumber.js: these screenshots are
+  // taken against a live third-party site, so a run can be spoiled by a transient
+  // reflow or a slow `networkidle` that the ad blocking didn't fully settle. Two
+  // retries on CI; a real baseline drift still fails every attempt and stays red.
+  retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
   reporter: [
     ['html', { outputFolder: 'reports/playwright-visual-report', open: 'never' }],
