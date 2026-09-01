@@ -39,6 +39,15 @@ export class LoginPage extends BasePage {
   }
 
   async isOnAccountInfoStep(): Promise<boolean> {
-    return this.page.locator(this.accountInfoHeading).isVisible();
+    // beginSignup() clicks a button that triggers a real page navigation, not a
+    // client-side update — isVisible() alone checks the DOM at this exact instant
+    // and can run before that navigation lands, racing it. waitFor() gives the
+    // navigation a real window to finish before deciding the answer is "no".
+    try {
+      await this.page.locator(this.accountInfoHeading).waitFor({ state: 'visible', timeout: 10_000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

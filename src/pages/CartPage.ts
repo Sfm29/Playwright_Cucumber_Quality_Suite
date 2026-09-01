@@ -13,7 +13,16 @@ export class CartPage extends BasePage {
   }
 
   async hasProduct(productId: string): Promise<boolean> {
-    return this.page.locator(this.rowById(productId)).isVisible();
+    // Same reasoning as LoginPage.isOnAccountInfoStep(): goToCartFromModal() triggers
+    // a real page navigation to /view_cart, so a bare isVisible() can run before the
+    // row has rendered and race it. waitFor() gives the navigation a real window to
+    // finish before deciding the product isn't there.
+    try {
+      await this.page.locator(this.rowById(productId)).waitFor({ state: 'visible', timeout: 10_000 });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async priceFor(productId: string): Promise<string> {
