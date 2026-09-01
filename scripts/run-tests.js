@@ -28,7 +28,36 @@ const result = spawnSync('npx', ['cucumber-js', ...cucumberArgs], {
   shell: process.platform === 'win32',
 });
 
-function truncate(text, maxLines = 4) {
+const A11Y_PREFIX = 'Blocking accessibility violations found:\n';
+
+/**
+ * Accessibility failures carry a pretty-printed JSON blob of axe-core's full
+ * violation objects — genuinely useful, but each one runs 30-60+ lines once you
+ * include axe's internal rule-check detail (`any`/`all`/`none`), which buries the
+ * two things you actually need to act on it: WHICH element, and WHY. Parse it back
+ * out and print just that. Anything that doesn't match this exact shape (i.e. every
+ * non-accessibility failure) falls through to a plain, generous truncation instead.
+ */
+function summarizeError(text) {
+  if (text?.startsWith(A11Y_PREFIX)) {
+    try {
+      const violations = JSON.parse(text.slice(A11Y_PREFIX.length));
+      return violations
+        .map((v) => {
+          const nodeLines = v.nodes
+            .map((n) => `    - ${n.target.join(', ')}\n      ${n.failureSummary.replace(/\n/g, '\n      ')}`)
+            .join('\n');
+          return `  [${v.impact}] ${v.id}: ${v.help}\n${nodeLines}`;
+        })
+        .join('\n');
+    } catch {
+      // Fall through to plain truncation if the shape ever changes.
+    }
+  }
+  return truncate(text);
+}
+
+function truncate(text, maxLines = 6) {
   return (text || '').split('\n').slice(0, maxLines).join('\n');
 }
 
@@ -59,7 +88,7 @@ for (const feature of features) {
           feature: feature.name,
           scenario: element.name,
           step: step.name,
-          error: truncate(step.result.error_message),
+          error: summarizeError(step.result.error_message),
         });
       }
     } else {
