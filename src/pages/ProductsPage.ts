@@ -22,8 +22,26 @@ export class ProductsPage extends BasePage {
   }
 
   async search(term: string): Promise<void> {
+    const before = (await this.page.locator(this.searchedProductsHeading).textContent())?.trim() ?? '';
     await this.page.fill(this.searchInput, term);
     await this.page.click(this.searchButton);
+    // The results heading is swapped in by client-side JS, not a full page navigation —
+    // reading it immediately after the click can race that update. Only ever observed
+    // intermittently on WebKit in CI, never chromium/firefox, which fits: it's a timing
+    // race, not a broken selector. Wait for the heading's text to actually move away
+    // from its pre-search value rather than asserting a specific target string here,
+    // which would wrongly couple this page object to one step's expected text.
+    await this.page.waitForFunction(
+      ({ selector, previous }) => {
+        // Runs inside the browser page, where `document` is real — this project's
+        // tsconfig deliberately omits the DOM lib (it's a Node/Playwright test
+        // runner, not browser code) so the compiler doesn't know that here.
+        // @ts-expect-error — `document` exists in the page context this callback runs in.
+        return document.querySelector(selector)?.textContent?.trim() !== previous;
+      },
+      { selector: this.searchedProductsHeading, previous: before },
+      { timeout: 10_000 },
+    );
   }
 
   async searchedProductsHeadingText(): Promise<string> {
