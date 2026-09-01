@@ -23,6 +23,13 @@ BeforeAll(async function () {
     // binary Playwright's own version-pinned installer can't reach (e.g. no network
     // access to its CDN). Unset in normal use — Playwright resolves its own browser.
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined,
+    // Headless Chromium's colour management can miscalculate rendered pixel colours
+    // enough to trip axe-core's `color-contrast` check with false positives that
+    // don't reproduce headed — a known interaction between headless Chrome and
+    // axe-core, not a defect in the page. Forcing sRGB gives axe-core the same
+    // colour values a real display would. Harmless for chromium's other suites;
+    // ignored entirely by firefox/webkit.
+    args: engine === 'chromium' ? ['--force-color-profile=srgb'] : undefined,
   });
 });
 
