@@ -25,3 +25,19 @@ services:
     volumes:
       - ./reports:/app/reports
     command: ["npm", "run", "test:webkit"]
+
+  # Playwright's toHaveScreenshot() bakes the OS into the snapshot filename
+  # (…-linux.png / …-win32.png / …-darwin.png) because font rendering genuinely
+  # differs per platform — a baseline recorded on Windows will never match what
+  # `ubuntu-latest` renders in CI, regardless of maxDiffPixelRatio. CI needs
+  # …-linux.png files specifically. This service runs the update inside the same
+  # Linux image the Dockerfile already uses (matching CI's ubuntu-latest), and
+  # bind-mounts just the snapshots folder so the generated PNGs land back on the
+  # host to be committed — instead of vanishing with the container.
+  visual-baseline-update:
+    build: .
+    environment:
+      - BASE_URL=https://automationexercise.com
+    volumes:
+      - ./tests/visual/visual.spec.ts-snapshots:/app/tests/visual/visual.spec.ts-snapshots
+    command: ["npm", "run", "test:visual:update"]

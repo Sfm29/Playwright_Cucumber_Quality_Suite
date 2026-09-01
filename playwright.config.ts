@@ -14,6 +14,12 @@ export default defineConfig({
   workers: process.env.CI ? 2 : undefined,
   reporter: [
     ['html', { outputFolder: 'reports/playwright-visual-report', open: 'never' }],
+    // Same reasoning as the cucumber-js wrapper in scripts/run-tests.js: the HTML
+    // report is great for a human, but bundles its data as embedded, non-trivial-to-
+    // parse blobs inside index.html — a bad shape for diagnosing a CI failure without
+    // opening a browser. A flat JSON report alongside it means a failure can always
+    // be read directly off the uploaded artifact.
+    ['json', { outputFile: 'reports/playwright-visual-report/results.json' }],
     ['list'],
   ],
   use: {
