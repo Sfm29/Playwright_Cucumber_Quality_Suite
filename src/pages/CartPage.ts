@@ -34,9 +34,27 @@ export class CartPage extends BasePage {
   }
 
   async removeProduct(productId: string): Promise<void> {
-    await this.page.click(this.deleteButtonById(productId));
-    // The row removal is a client-side DOM update with no navigation — wait for it to disappear.
-    await this.page.waitForSelector(this.rowById(productId), { state: 'detached' });
+    // Deleting is an AJAX call to /delete_cart/<id> that then removes the <tr> in JS.
+    // Locally that's instant and 100% reliable; from a CI runner against the live
+    // site it intermittently doesn't reflect in the DOM at all — the click lands but
+    // the row never detaches, and Cucumber's retry just re-hits the same 30s hang
+    // (observed on CI: "64 x locator resolved to visible <tr id='product-1'>").
+    // So: click, give it a short window, and if the row is still there reload the
+    // cart — the delete almost always registered server-side and a fresh page
+    // reflects it. Only if it truly didn't (row still present after a reload) do we
+    // click again. Three rounds before giving up for real.
+    const row = this.page.locator(this.rowById(productId));
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if ((await row.count()) === 0) return;
+      await this.page.click(this.deleteButtonById(productId));
+      try {
+        await row.waitFor({ state: 'detached', timeout: 8_000 });
+        return;
+      } catch {
+        await this.goto();
+      }
+    }
+    throw new Error(`Cart row ${this.rowById(productId)} still present after 3 delete attempts`);
   }
 
   async isEmpty(): Promise<boolean> {
