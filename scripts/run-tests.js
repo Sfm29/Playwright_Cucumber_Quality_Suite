@@ -39,9 +39,15 @@ const A11Y_PREFIX = 'Blocking accessibility violations found:\n';
  * non-accessibility failure) falls through to a plain, generous truncation instead.
  */
 function summarizeError(text) {
-  if (text?.startsWith(A11Y_PREFIX)) {
+  // Playwright's expect() wraps a custom assertion message inside its own Error,
+  // and that error's stringified form (what cucumber-js records) can prepend things
+  // like "Error: " ahead of it — so search for the marker rather than anchoring to
+  // the very start of the string.
+  const markerIndex = text?.indexOf(A11Y_PREFIX) ?? -1;
+  if (markerIndex !== -1) {
     try {
-      const violations = JSON.parse(text.slice(A11Y_PREFIX.length));
+      const jsonText = extractBalancedJsonArray(text, markerIndex + A11Y_PREFIX.length);
+      const violations = JSON.parse(jsonText);
       return violations
         .map((v) => {
           const nodeLines = v.nodes
@@ -55,6 +61,35 @@ function summarizeError(text) {
     }
   }
   return truncate(text);
+}
+
+/**
+ * Playwright's expect() can append its own diagnostic text (e.g. "Expected: ...")
+ * after our custom assertion message, so the JSON array embedded in it isn't
+ * necessarily the whole rest of the string. Scan forward from `start` (expected to
+ * be a '[') and return just the substring up to its matching close bracket, tracking
+ * string literals so brackets inside them don't throw off the count.
+ */
+function extractBalancedJsonArray(text, start) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') inString = false;
+      continue;
+    }
+    if (char === '"') inString = true;
+    else if (char === '[') depth++;
+    else if (char === ']') {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  throw new Error('Unbalanced JSON array — could not find matching close bracket.');
 }
 
 function truncate(text, maxLines = 6) {
